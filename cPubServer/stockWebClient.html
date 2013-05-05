@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>stock Message</title>
+    <style>
+        div#output {
+            border: 1px solid #000;
+            width: 960px;
+            height: 450px;
+            overflow: auto;
+            background-color: #333;
+            color: #6cf;
+        }
+
+        strong {
+            color: #f66;
+        }
+        
+        input#input {
+            border: 1px solid #000;
+            width: 140px;
+        }
+
+        button {
+            border: 1px solid #000;
+            width: 100px;
+        }
+    </style>
+    
+    <script>
+        function connect(host, port, messageListener, errorListener) {
+            window.WebSocket = window.WebSocket || window.MozWebSocket;
+
+            if (!window.WebSocket) {
+                alert('Your browser does not support WebSocket.');
+                return null;
+            }
+
+            var connection = new WebSocket('ws://' + host + ':' + port);
+
+            connection.onmessage = function(message) {
+                try {
+                    var parsed = JSON.parse(message.data);
+                    switch (parsed.type) {
+                    		case 'register':
+                            if (messageListener) {
+                            	  var  printStr = 'start stockid:' + parsed.stockid + ',price:' + parsed.price ;
+                                messageListener(printStr);
+                            }
+                            break;                    				
+                        case 'message':
+                            if (messageListener) {
+                            	  var  printStr = 'stockid:' + parsed.stockid + ',price:' + parsed.price + ',numb:' + parsed.numb;
+                                messageListener(printStr);
+                            }
+                            break;
+                        case 'error':
+                            if (errorListener) {
+                                errorListener(parsed.content);
+                            }
+                            break;
+                        default:
+                            throw new Error('Unknown message type ' + parsed.type);
+                            break;
+                    }
+                } catch (e) {
+                    console.warn(e);
+                    alert(e);
+                }
+            };
+
+            connection.subscribe = function(stockid) {
+                connection.send(JSON.stringify({
+                    type: 'subscribe',
+                    stockid: stockid
+                }));
+            };
+
+
+            connection.loginReg = function() {
+                connection.send(JSON.stringify({
+                    type: 'login'
+                }));
+            };
+
+            connection.unsubscribe = function(stockid) {
+                connection.send(JSON.stringify({
+                    type: 'unsubscribe',
+                    stockid: stockid
+                }));
+            };
+
+            return connection;
+        }
+
+        // the 'connection' object
+        var connection = null;
+
+        var output = null;
+
+
+        var strInputIp    = "127.0.0.1";
+
+        		
+        // initialize
+        window.onload = function() {
+            output = document.getElementById('output');
+
+						
+						connection = connect(
+                    strInputIp,
+                    7015,
+                    // message handler
+                    function(content) {
+                        output.innerHTML += ('<strong>Message: </strong>' + content + '<br>\n');
+                    },
+                    // error handler
+                    function(content) {
+                        output.innerHTML += ('<strong>Error: </strong>' + content + '<br>\n');
+                    }
+            );
+
+						// subscribe a topic
+            connection.onopen = function() {
+     						// connection.subscribe("test");
+            };
+
+						
+        };
+				
+        function _Connect() {
+        		if(inputIp.value !=strInputIp )
+						{
+							  alert('connect Ip ='+ inputIp.value );
+								connection = connect(
+                    inputIp.value,
+                    7015,
+                    // message handler
+                    function(content, match) {
+                        output.innerHTML += ('<strong>Message: </strong>' + content + '<br>\n');
+                    },
+                    // error handler
+                    function(content) {
+                        output.innerHTML += ('<strong>Error: </strong>' + content + '<br>\n');
+                    }
+            		);
+            		
+								connection.onopen = function() {
+		                connection.loginReg();
+		            };
+
+						}	else {
+								connection.loginReg();
+						}        	
+
+        }
+			
+				
+        function _send() {
+						alert('connect subscribe ='+ inputStock.value );
+						connection.subscribe(inputStock.value);
+
+        }
+
+        function _clear() {
+        	  connection.unsubscribe(inputStock.value);
+            output.innerHTML = '';
+        }
+    </script>
+</head>
+<body>
+ip: <input type="text" value="127.0.0.1" id="inputIp">
+<button id="Connect" onclick="_Connect()">Connect</button>
+stock id: <input type="text" value="12345" id="inputStock">
+<button id="send" onclick="_send()">Subscribe</button>
+
+<button id="clear" onclick="_clear()">Clear</button>
+<div id="output"></div>
+
+
+</body>
+</html>
